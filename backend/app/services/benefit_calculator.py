@@ -18,7 +18,21 @@ async def calculate_unclaimed_benefits(session: AsyncSession, user_id: int) -> d
     Returns a breakdown of used/unused value per benefit for the given
     user's card, plus a grand total unclaimed dollar amount.
     """
-    card = await _get_users_card(session, user_id)
+    card = await _get_card_by_user_id(session, user_id)
+    return await _calculate_unclaimed_benefits_for_card(session, card)
+
+
+async def calculate_unclaimed_benefits_by_card_id(session: AsyncSession, card_id: int) -> dict:
+    """
+    Same as calculate_unclaimed_benefits, but looked up directly by card_id —
+    used by the nudge engine, where a transaction already carries card_id
+    and there's no need to go through user_id.
+    """
+    card = await _get_card_by_id(session, card_id)
+    return await _calculate_unclaimed_benefits_for_card(session, card)
+
+
+async def _calculate_unclaimed_benefits_for_card(session: AsyncSession, card: Card) -> dict:
     all_transactions = await _get_transactions_for_card(session, card.id)
     benefit_rules = load_benefit_rules_for_card(card.card_name)
 
@@ -53,11 +67,19 @@ async def calculate_unclaimed_benefits(session: AsyncSession, user_id: int) -> d
     }
 
 
-async def _get_users_card(session: AsyncSession, user_id: int) -> Card:
+async def _get_card_by_user_id(session: AsyncSession, user_id: int) -> Card:
     result = await session.execute(select(Card).where(Card.user_id == user_id))
     card = result.scalars().first()
     if card is None:
         raise ValueError(f"No card found for user_id={user_id}")
+    return card
+
+
+async def _get_card_by_id(session: AsyncSession, card_id: int) -> Card:
+    result = await session.execute(select(Card).where(Card.id == card_id))
+    card = result.scalars().first()
+    if card is None:
+        raise ValueError(f"No card found for card_id={card_id}")
     return card
 
 
