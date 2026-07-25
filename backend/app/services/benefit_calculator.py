@@ -94,23 +94,33 @@ def _finalize_bucket(bucket: dict) -> dict:
     if bucket["type"] == "credit":
         used = min(bucket["dollars_used"], bucket["limit"])
         unused_value = max(bucket["limit"] - used, 0)
+        dollar_value_used = used
+        dollar_value_limit = bucket["limit"]
 
     elif bucket["type"] == "visit":
         remaining_visits = max(bucket["limit"] - bucket["visits_used"], 0)
         unused_value = remaining_visits * bucket["value_per_use"]
         used = bucket["visits_used"]
+        dollar_value_used = bucket["visits_used"] * bucket["value_per_use"]
+        dollar_value_limit = bucket["limit"] * bucket["value_per_use"]
 
     elif bucket["type"] == "protection":
         unused_value = min(bucket["protection_potential_value"], bucket["limit"])
         used = 0  # no claim mechanism exists yet, so nothing is ever "used"
+        dollar_value_used = 0
+        dollar_value_limit = None  # not a fixed spending budget like credit/visit
 
     else:
         used = 0
         unused_value = 0
+        dollar_value_used = 0
+        dollar_value_limit = None
 
     return {
         "type": bucket["type"],
         "limit": bucket["limit"],
         "used": round(used, 2) if isinstance(used, float) else used,
         "unused_value": round(unused_value, 2),
+        "dollar_value_used": round(dollar_value_used, 2),
+        "dollar_value_limit": round(dollar_value_limit, 2) if dollar_value_limit is not None else None,
     }
