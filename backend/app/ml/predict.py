@@ -42,3 +42,51 @@ def predict_engagement(features: dict) -> float:
         return STUB_SCORE
     proba = model.predict_proba([_encode(features)])[0][1]
     return float(proba)
+
+
+# Neutral baseline for attribution: an "average" request. Each feature's
+# contribution = score(actual) - score(actual with that feature reset to
+# its baseline value). Model-agnostic, no extra dependencies.
+_BASELINE = {
+    "category": None,  # neutralized by averaging over all categories
+    "days_since_last_benefit_use": 60,
+    "prior_click_rate": 0.5,
+    "amount": 150.0,
+}
+
+_LABELS = {
+    "category": "transaction category",
+    "days_since_last_benefit_use": "recency of last benefit use",
+    "prior_click_rate": "prior click rate",
+    "amount": "transaction amount",
+}
+
+
+def explain_engagement(features: dict, top_n: int = 3) -> list:
+    """
+    Returns the top_n feature contributions to this score, most
+    influential first, e.g.:
+      [{"feature": "prior click rate", "contribution": 0.31}, ...]
+    Positive contribution = pushed the score up vs. an average request.
+    """
+    model = _load_model()
+    if model is None:
+        return []
+
+    score = predict_engagement(features)
+    contributions = []
+    for key in ("days_since_last_benefit_use", "prior_click_rate", "amount"):
+        neutral = dict(features)
+        neutral[key] = _BASELINE[key]
+        contributions.append((key, score - predict_engagement(neutral)))
+
+    cat_scores = [
+        predict_engagement({**features, "category": c}) for c in CATEGORIES
+    ]
+    contributions.append(("category", score - sum(cat_scores) / len(cat_scores)))
+
+    contributions.sort(key=lambda kv: abs(kv[1]), reverse=True)
+    return [
+        {"feature": _LABELS[k], "contribution": round(v, 4)}
+        for k, v in contributions[:top_n]
+    ]
