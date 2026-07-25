@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
 from app.schemas import PredictEngagementRequest, TransactionCreate
+from app.ml.predict import predict_engagement as ml_predict_engagement
 from app.services.benefit_calculator import calculate_unclaimed_benefits_by_card_id
 from app.services.nudge_engine import evaluate_nudge_rules
 
@@ -27,9 +28,8 @@ async def generate_nudge(payload: TransactionCreate, session: AsyncSession = Dep
 @router.post("/predict-engagement")
 def predict_engagement(payload: PredictEngagementRequest):
     """
-    STUB — hardcoded until the ML teammate's real model lands in
-    app/ml/predict.py. Swap the return line below for a call to
-    predict_engagement(payload.model_dump()) once that exists.
-    See docs/api-contract.md for the exact interface they're building to.
+    Real model via app/ml/predict.py (falls back to the 0.75 stub value
+    internally if model.joblib hasn't been trained yet).
+    See docs/api-contract.md for the interface.
     """
-    return {"engagement_score": 0.75}
+    return {"engagement_score": ml_predict_engagement(payload.model_dump())}
