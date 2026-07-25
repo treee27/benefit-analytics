@@ -1,0 +1,41 @@
+{
+  "cards": [
+    {
+      "card": "Gold",
+      "benefits": [
+        {
+          "name": "Uber Credit",
+          "type": "credit",
+          "category_match": "transport",
+          "merchant_match": "Uber",
+          "limit": 200
+        },
+        {
+          "name": "Dining Credit",
+          "type": "credit",
+          "category_match": "dining",
+          "merchant_match": null,
+          "limit": 120
+        },
+        {
+          "name": "Lounge",
+          "type": "visit",
+          "category_match": "travel",
+          "merchant_match": null,
+          "location_type_match": "airport",
+          "limit": 4,
+          "value_per_use": 45
+        },
+        {
+          "name": "Purchase Protection",
+          "type": "protection",
+          "category_match": "electronics",
+          "merchant_match": null,
+          "min_amount": 1000,
+          "limit": 10000,
+          "value_percent_of_purchase": 0.10
+        }
+      ]
+    }
+  ]
+}
