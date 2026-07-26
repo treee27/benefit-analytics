@@ -21,6 +21,7 @@ app = FastAPI(title="Benefit Underutilization Analytics API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],  # React dev server (Vite default)
+    allow_origin_regex=r"https://.*\.vercel\.app",  # covers prod + every Vercel preview URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

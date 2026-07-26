@@ -28,3 +28,5 @@ Thumbs.db
 # Node.js
 node_modules/
 frontend/node_modules/
+.env.local
+.env.*.local
