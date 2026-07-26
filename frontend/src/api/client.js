@@ -9,3 +9,17 @@ export async function fetchDashboardData(userId) {
 
   return response.json();
 }
+
+export async function decideNudgeForTransaction(transactionPayload) {
+  const response = await fetch(`${API_BASE_URL}/api/nudges/decide`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(transactionPayload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Nudge decision request failed with status ${response.status}`);
+  }
+
+  return response.json();
+}

@@ -4,6 +4,7 @@ import { fetchDashboardData } from "../api/client.js";
 import BenefitBarChart from "../components/BenefitBarChart.jsx";
 import BenefitPieChart from "../components/BenefitPieChart.jsx";
 import HealthScoreGauge from "../components/HealthScoreGauge.jsx";
+import NudgeSimulator from "../components/NudgeSimulator.jsx";
 import SummaryCard from "../components/SummaryCard.jsx";
 
 export default function Dashboard({ userId }) {
@@ -54,6 +55,11 @@ export default function Dashboard({ userId }) {
         <BenefitPieChart totalUsedValue={total_used_value} totalUnusedValue={total_unused_value} />
         <BenefitBarChart chartRows={chart_rows} />
       </div>
+
+      {/* Demo seed data creates user 1 with card_id 1, so userId doubles as
+          cardId here. If real auth/multiple cards per user gets added later,
+          this needs its own card lookup instead. */}
+      <NudgeSimulator cardId={userId} />
 
       <div>
         <p className="suggestions-section-title">Ways to use what's left</p>
