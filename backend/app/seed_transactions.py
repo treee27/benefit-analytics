@@ -26,18 +26,69 @@ CATEGORY_MERCHANTS = {
 }
 
 CATEGORY_AMOUNT_RANGES = {
-    "dining": (10, 60),
-    "transport": (8, 55),
+    "dining": (10, 35),
+    "transport": (8, 40),
     "travel": (150, 900),
     "electronics": (100, 2000),
 }
 
 NUMBER_OF_USERS = 5
-TRANSACTIONS_PER_USER = 40
+
+# Instead of drawing 40 transactions uniformly across 4 categories (which
+# reliably blows past Dining/Uber/Lounge limits every time), each user gets
+# a randomized COUNT per category. This naturally produces a mix of
+# partially-used and fully-used benefits across the 5 users, instead of
+# everyone saturating every credit every time.
+CATEGORY_TRANSACTION_COUNT_RANGES = {
+    "dining": (0, 6),  # 0-6 dining trips a year, $10-35 each -> $0-210 vs. $120 limit
+    "transport": (0, 6),  # 0-6 Uber rides, $8-40 each -> $0-240 vs. $200 limit
+    "travel": (0, 3),  # 0-3 flights/hotels a year (lounge triggers on airline ones)
+    "electronics": (0, 2),  # 0-2 big purchases a year
+}
 
 
-def build_random_transaction(card_id: int) -> dict:
-    category = random.choice(list(CATEGORY_MERCHANTS.keys()))
+# The very first user created becomes card_id=1, which is the hardcoded
+# DEMO_USER_ID the React frontend always displays. Random data for this
+# user is too risky for a live demo — it can land at either extreme (fully
+# saturated, or entirely unused, as we saw). Instead this user gets a fixed,
+# hand-picked transaction history that guarantees a good story every time:
+# a mix of partially-used credits, one lounge visit used, and one big
+# electronics purchase for Purchase Protection.
+DEMO_USER_FIXED_CATEGORY_TRANSACTIONS = [
+    # Dining: $58 of $120 used -> $62 unused
+    ("dining", "Chipotle", 22.0, None),
+    ("dining", "Starbucks", 18.0, None),
+    ("dining", "Local Diner", 18.0, None),
+    # Transport/Uber: $105 of $200 used -> $95 unused
+    ("transport", "Uber", 40.0, None),
+    ("transport", "Uber", 35.0, None),
+    ("transport", "Lyft", 30.0, None),
+    # Travel: 1 of 4 lounge visits used -> 3 remaining ($135 unused)
+    ("travel", "Delta Airlines", 420.0, "airport"),
+    # Electronics: one big purchase, triggers Purchase Protection
+    ("electronics", "Best Buy", 1200.0, None),
+]
+
+
+def build_fixed_demo_transactions(card_id: int) -> list[dict]:
+    demo_transactions = []
+
+    for category, merchant_name, amount, location_type in DEMO_USER_FIXED_CATEGORY_TRANSACTIONS:
+        demo_transactions.append(
+            {
+                "card_id": card_id,
+                "transaction_date": fake.date_between(start_date="-180d", end_date="today"),
+                "merchant_name": merchant_name,
+                "category": category,
+                "amount": amount,
+                "location_type": location_type,
+            }
+        )
+
+    return demo_transactions
+
+
+def build_random_transaction(card_id: int, category: str) -> dict:
     merchant_name = random.choice(CATEGORY_MERCHANTS[category])
     amount_low, amount_high = CATEGORY_AMOUNT_RANGES[category]
     amount = round(random.uniform(amount_low, amount_high), 2)
@@ -58,6 +109,17 @@ def build_random_transaction(card_id: int) -> dict:
     }
 
 
+def build_transactions_for_user(card_id: int) -> list[dict]:
+    user_transactions = []
+
+    for category, (minimum_count, maximum_count) in CATEGORY_TRANSACTION_COUNT_RANGES.items():
+        transaction_count_for_category = random.randint(minimum_count, maximum_count)
+        for _ in range(transaction_count_for_category):
+            user_transactions.append(build_random_transaction(card_id, category))
+
+    return user_transactions
+
+
 async def seed_database():
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
@@ -74,8 +136,12 @@ async def seed_database():
             session.add(new_card)
             await session.flush()  # get new_card.id before creating transactions
 
-            for _ in range(TRANSACTIONS_PER_USER):
-                transaction_data = build_random_transaction(new_card.id)
+            if user_index == 0:
+                transactions_for_this_user = build_fixed_demo_transactions(new_card.id)
+            else:
+                transactions_for_this_user = build_transactions_for_user(new_card.id)
+
+            for transaction_data in transactions_for_this_user:
                 new_transaction = Transaction(**transaction_data)
                 session.add(new_transaction)
                 all_generated_transactions.append(transaction_data)
@@ -84,8 +150,8 @@ async def seed_database():
 
     write_transactions_csv(all_generated_transactions)
     print(
-        f"Seeded {NUMBER_OF_USERS} users, each with a Gold card and "
-        f"{TRANSACTIONS_PER_USER} transactions. CSV exported to data/transactions.csv"
+        f"Seeded {NUMBER_OF_USERS} users with a Gold card each and a randomized "
+        f"transaction history per user. CSV exported to data/transactions.csv"
     )
 
 

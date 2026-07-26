@@ -32,6 +32,7 @@ def build_dashboard_response(unclaimed_breakdown: dict) -> dict:
             total_used_value += benefit_info["dollar_value_used"]
 
     suggestions = _build_suggestions(benefits)
+    benefit_health_score = _calculate_benefit_health_score(chart_rows)
 
     return {
         "card_name": unclaimed_breakdown["card_name"],
@@ -40,7 +41,36 @@ def build_dashboard_response(unclaimed_breakdown: dict) -> dict:
         "total_unused_value": round(total_unused_value, 2),
         "chart_rows": chart_rows,
         "suggestions": suggestions,
+        "benefit_health_score": benefit_health_score,
     }
+
+
+def _calculate_benefit_health_score(chart_rows: list[dict]) -> int:
+    """
+    Averages the utilization ratio (used / limit) across every benefit
+    that has a fixed budget (credit + visit types). Purchase Protection
+    is excluded — it's a coverage cap, not a spending budget, so "using"
+    it isn't a meaningful concept the way spending a credit is.
+
+    Returns a whole number 0-100. Higher = better overall utilization.
+    """
+    utilization_ratios = []
+
+    for row in chart_rows:
+        if not row["has_fixed_budget"]:
+            continue
+
+        benefit_limit = row["used_value"] + row["unused_value"]
+        if benefit_limit <= 0:
+            continue
+
+        utilization_ratios.append(row["used_value"] / benefit_limit)
+
+    if not utilization_ratios:
+        return 0
+
+    average_utilization = sum(utilization_ratios) / len(utilization_ratios)
+    return round(average_utilization * 100)
 
 
 def _build_suggestions(benefits: dict) -> list[dict]:

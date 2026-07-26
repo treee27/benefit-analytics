@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { fetchDashboardData } from "../api/client.js";
 import BenefitBarChart from "../components/BenefitBarChart.jsx";
 import BenefitPieChart from "../components/BenefitPieChart.jsx";
+import HealthScoreGauge from "../components/HealthScoreGauge.jsx";
 import SummaryCard from "../components/SummaryCard.jsx";
 
 export default function Dashboard({ userId }) {
@@ -23,8 +24,15 @@ export default function Dashboard({ userId }) {
     return <p className="state-message">Loading your benefits...</p>;
   }
 
-  const { card_name, total_unused_value, total_used_value, total_budget_value, chart_rows, suggestions } =
-    dashboardData;
+  const {
+    card_name,
+    total_unused_value,
+    total_used_value,
+    total_budget_value,
+    chart_rows,
+    suggestions,
+    benefit_health_score,
+  } = dashboardData;
 
   return (
     <>
@@ -42,6 +50,7 @@ export default function Dashboard({ userId }) {
       </div>
 
       <div className="charts-row">
+        <HealthScoreGauge score={benefit_health_score} />
         <BenefitPieChart totalUsedValue={total_used_value} totalUnusedValue={total_unused_value} />
         <BenefitBarChart chartRows={chart_rows} />
       </div>
